@@ -1,0 +1,50 @@
+from skimage import io
+from matplotlib import pyplot as plt
+import numpy as np
+
+pgm_path = '/content/color_checker.pgm'
+bayer = io.imread(pgm_path).astype(np.uint16)
+
+def DPC_grad(bayer, thresh):
+  """
+  inputs:
+    bayer = raw bayer domain image
+    thresh = threshold value
+
+  outputs:
+    dpc_img = bayer domain image with dead pixels corrected for with mean filter
+  """
+
+  dpc_img = np.copy(bayer)
+  padded_bayer = np.pad(bayer, (2,2), 'reflect')
+  thresh = thresh * 8
+
+  p1 = padded_bayer[:-4:1, :-4:1] # create 9 different arrays for p0:p8
+  p2 = padded_bayer[:-4:1, 2:-2:1]
+  p3 = padded_bayer[:-4:1, 4::1]
+  p4 = padded_bayer[2:-2:1, :-4:1]
+  p0 = padded_bayer[2:-2:1, 2:-2:1]
+  p5 = padded_bayer[2:-2:1, 4::1]
+  p6 = padded_bayer[4::1, :-4:1]
+  p7 = padded_bayer[4::1, 2:-2:1]
+  p8 = padded_bayer[4::1, 4::1]
+
+  dv = (p2 + p7 + 1) // 2
+  dh = (p4 + p5 + 1) // 2
+  ddr = (p1 + p8 + 1) // 2
+  ddl = (p3 + p6 + 1) // 2
+  min_gradients = np.minimum.reduce((dv, dh, ddr, ddl))
+
+  neighbors = np.array([p1, p2, p3, p4, p5, p6, p7, p8]) # store p1:p8 in a seperate array
+
+  diff = np.abs(neighbors - p0) # store absolute differences between p1:p8 and p0
+  condition = diff > thresh # p1:p8 that stores location of all dead pixels
+  sum = np.sum(condition, axis = 0) # allows you to check only one 2d array, and test for missed dead pixels with all neighbors
+
+  dpc_img = np.where(sum >= 1, min_gradients, bayer).astype(np.uint16) # if labelled dead by any neighbor, replace with mean
+
+  return dpc_img
+
+thresh = np.max(bayer) * 0.05
+dpc_img = DPC_grad(bayer, thresh)
+plt.imshow(dpc_img, cmap = 'gray')
