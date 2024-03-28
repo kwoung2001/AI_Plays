@@ -1,0 +1,38 @@
+import numpy as np
+from skimage import io
+from matplotlib import pyplot as plt
+
+def BLC(dpc_img, offsets):
+  """
+  inputs:
+    dpc_img = bayer domain image after dead pixel concealment
+    offsets = dictionary with black level offset values, keys (bl_r, bl_gr, bl_gb, bl_b)
+
+  outputs:
+    blc_img = bayer domain image with adjusted black levels
+  """
+
+  rows, cols = dpc_img.shape
+  blc_img = np.empty((rows, cols)) # create a blank image with the same size as the bayer image to adjust black levels in
+
+
+  for i in range(rows):
+    for j in range(cols):
+      if (i % 2 == 0) & (j % 2 == 0): # if row and col index = even, handling red pixel
+        blc_img[i, j] = dpc_img[i, j] + offsets['bl_r']
+      elif (i % 2 == 0) & (j % 2 != 0): # if row index = even and col index = odd, handling green pixel on red row
+        blc_img[i, j] = dpc_img[i, j] + offsets['bl_gr']
+      elif (i % 2 != 0) & (j % 2 == 0): # if row index = odd and col index = even, handline green pixel on blue row
+        blc_img[i, j] = dpc_img[i, j] + offsets['bl_gb']
+      elif (i % 2 != 0) & (j % 2 != 0): # if row and col index = odd, handling blue pixel
+        blc_img[i, j] = dpc_img[i, j] + offsets['bl_b']
+
+  return np.clip(blc_img, 0, None)
+
+"""
+# un-comment to see intermediate plots
+
+offsets = {'bl_r':-10, 'bl_gr':-10, 'bl_gb':-10, 'bl_b':-10}
+blc_img = BLC(bayer, offsets)
+plt.imshow(blc_img, cmap = 'gray')
+"""
