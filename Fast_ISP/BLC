@@ -1,0 +1,41 @@
+import numpy as np
+from skimage import io
+from matplotlib import pyplot as plt
+
+def BLC(dpc_img, offsets):
+  """
+  inputs:
+    dpc_img = bayer domain image after dead pixel concealment
+    offsets = dictionary with black level offset values, keys (bl_r, bl_gr, bl_gb, bl_b)
+
+  outputs:
+    blc_img = bayer domain image with adjusted black levels
+  """
+
+  blc_img = np.empty(dpc_img.shape) # create an empty 2D array of the same size as the dpc_img
+
+  r = dpc_img[::2, ::2] # use array splicing to extract r, gr, gb, and b pixels from the full bayer image
+  gr = dpc_img[1::2, ::2]
+  gb = dpc_img[::2, 1::2]
+  b = dpc_img[1::2, 1::2]
+
+  r = r + offsets['bl_r'] # add offsets to each channel
+  gr = gr + offsets['bl_gr']
+  gb = gb + offsets['bl_gb']
+  b = b + offsets['bl_b']
+
+  blc_img[::2, ::2] = r # return the adjusted values to create a final image
+  blc_img[1::2, ::2] = gr
+  blc_img[::2, 1::2] = gb
+  blc_img[1::2, 1::2] = b
+
+  return np.clip(blc_img, 0, None)
+
+"""
+# un-comment to see intermediate plots
+
+offsets = {'bl_r':-10, 'bl_gr':-10, 'bl_gb':-10, 'bl_b':-10}
+blc_img = BLC(bayer, offsets)
+plt.imshow(blc_img, cmap = 'gray')
+
+"""
